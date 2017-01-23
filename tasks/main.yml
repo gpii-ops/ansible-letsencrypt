@@ -1,0 +1,62 @@
+---
+
+- name: Request certificates
+  command: >
+    certbot certonly -t -q -n
+    --expand
+    --standalone
+    --standalone-supported-challenges {{ item.challenge }}
+    --agree-tos
+    -m {{ item.mail }}
+    --config-dir {{ letsencrypt_config_dir }}
+    --work-dir {{ letsencrypt_work_dir }}
+    --logs-dir {{ letsencrypt_logs_dir }}
+    -d {{ item.domains | join( ' -d ' ) }}
+  with_items: "{{ letsencrypt_certificates | default([]) }}"
+  when: new is defined and letsencrypt_certificates is defined
+
+- name: Renew certificates
+  command: >
+    certbot renew -q -n
+    --config-dir {{ letsencrypt_config_dir }}
+    --work-dir {{ letsencrypt_work_dir }}
+    --logs-dir {{ letsencrypt_logs_dir }}
+  when: renew is defined
+
+- name: Set file permissions
+  file:
+    recurse: true
+    owner: "{{ letsencrypt_deploy_user }}"
+    path: "{{ letsencrypt_dir }}"
+    state: directory
+  when: renew is defined or new is defined
+
+- name: Copy keys to frontends
+  copy:
+    content: "{{ lookup('file', letsencrypt_config_dir + '/live/' + item.0.domains.0 + '/privkey.pem') }}"
+    dest: "/etc/nginx/ssl/{{ item.0.domains.0 }}-key.pem"
+    remote_src: False
+  with_subelements:
+    - "{{ letsencrypt_certificates | default ([]) }}"
+    - frontends
+  when: deploy_certs is defined
+
+- name: Copy cert frontends
+  copy:
+    content: "{{ lookup('file', letsencrypt_config_dir + '/live/' + item.0.domains.0 + '/fullchain.pem') }}"
+    dest: "/etc/nginx/ssl/{{ item.0.domains.0 }}-cert.pem"
+    remote_src: False
+  with_subelements:
+    - "{{ letsencrypt_certificates | default ([]) }}"
+    - frontends
+  when: deploy_certs is defined
+
+- name: Create cron task to renew the certificates
+  cron:
+    name: "Ansible Certbot renew"
+    user: "{{ letsencrypt_deploy_user }}"
+    minute: "0"
+    hour: "0,12"
+    job: "cd /home/{{ letsencrypt_deploy_user }}/ops/ansible && ansible-playbook -i inventory/prd deploy_renew_certificates.yml"
+    state: present
+  when: new is defined
