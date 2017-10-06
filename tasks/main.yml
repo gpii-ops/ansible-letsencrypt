@@ -57,6 +57,6 @@
     user: "{{ letsencrypt_deploy_user }}"
     minute: "0"
     hour: "0,12"
-    job: "cd /home/{{ letsencrypt_deploy_user }}/ops/ansible && ansible-playbook -i inventory/prd deploy_renew_certificates.yml"
+    job: "cd /home/{{ letsencrypt_deploy_user }}/ops/ansible && ansible-playbook -i inventory/prd deploy_renew_certificates.yml >/dev/null"
     state: present
   when: new is defined
