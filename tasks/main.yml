@@ -3,6 +3,7 @@
 - name: Request certificates
   command: >
     certbot certonly -t -q -n
+    --cert-name {{ item.domains.0  }}
     --expand
     --standalone
     --standalone-supported-challenges {{ item.challenge }}
@@ -18,6 +19,7 @@
 - name: Renew certificates
   command: >
     certbot renew -q -n
+    --cert-name {{ item.domains.0  }}
     --config-dir {{ letsencrypt_config_dir }}
     --work-dir {{ letsencrypt_work_dir }}
     --logs-dir {{ letsencrypt_logs_dir }}
