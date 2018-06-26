@@ -23,6 +23,7 @@
     --config-dir {{ letsencrypt_config_dir }}
     --work-dir {{ letsencrypt_work_dir }}
     --logs-dir {{ letsencrypt_logs_dir }}
+  with_items: "{{ letsencrypt_certificates | default([]) }}"
   when: renew is defined
 
 - name: Set file permissions
